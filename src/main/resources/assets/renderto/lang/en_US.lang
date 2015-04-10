@@ -1,0 +1,17 @@
+itemGroup.renderto=Render To
+
+item.renderTo.name=Render To
+item.renderTo.toolTip.1=Press %s to open RenderTo GUI
+item.renderTo.toolTip.1.mouse=%s click to open RenderTo GUI
+
+gui.renderto.title=Render To
+gui.renderto.item=Item
+gui.renderto.block=Block
+gui.renderto.entity=Entity
+gui.renderto.left=<-
+gui.renderto.right=->
+gui.renderto.save=Save
+gui.renderto.saveall=Save All
+gui.renderto.outputsize=Size:
+
+
