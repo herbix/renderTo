@@ -2,7 +2,6 @@ package me.herbix.renderto;
 
 import java.util.List;
 
-import me.herbix.renderto.gui.RenderToGuiScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.client.settings.GameSettings;
@@ -18,7 +17,7 @@ public class ItemShowGUI extends Item {
 	@Override
 	public ItemStack onItemRightClick(ItemStack itemStackIn, World worldIn, EntityPlayer playerIn) {
 		if(worldIn.isRemote) {
-			Minecraft.getMinecraft().displayGuiScreen(new RenderToGuiScreen(Minecraft.getMinecraft().currentScreen));
+			Minecraft.getMinecraft().displayGuiScreen(RenderToMod.gui);
 		}
 		return super.onItemRightClick(itemStackIn, worldIn, playerIn);
 	}
