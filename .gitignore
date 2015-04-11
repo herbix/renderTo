@@ -18,3 +18,4 @@
 !/eclipse/.metadata/.plugins/org.eclipse.debug.core/.launches/Client.launch
 !/eclipse/.metadata/.plugins/org.eclipse.debug.core/.launches/Server.launch
 !/eclipse/.metadata/.plugins/org.eclipse.debug.ui/launchConfigurationHistory.xml
+!/build/libs
