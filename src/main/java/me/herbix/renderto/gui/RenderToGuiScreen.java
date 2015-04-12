@@ -1,11 +1,14 @@
 package me.herbix.renderto.gui;
 
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -34,6 +37,7 @@ import net.minecraft.entity.monster.EntityZombie;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.AxisAlignedBB;
+import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.client.config.GuiSlider;
 import net.minecraftforge.fml.client.config.GuiSlider.ISlider;
@@ -265,7 +269,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		GlStateManager.popMatrix();
 		RenderHelper.disableStandardItemLighting();
 		
-		saveFrameBufferToFile(fb, f, outputSize, outputSize);
+		saveFrameBufferToFile(fb, f, outputSize, outputSize, false);
 		
 		mb.bindFramebuffer(true);
 		fb.deleteFramebuffer();
@@ -279,47 +283,116 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		if(entity == null) {
 			return;
 		}
-		double sizex = 1.5 * size * entity.width * 1.414;
-		double sizey = 1.5 * size * (entity.height * 0.866 + entity.width * 0.707);
+		double sizex = 0.5 * size * entity.width * 1.414;
+		double sizey = 0.5 * size * (entity.height * 0.866 + entity.width * 0.707);
 		int outx = (int)(64 * sizex + 0.5);
 		int outy = (int)(64 * sizey + 0.5);
-
-		Framebuffer mb = mc.getFramebuffer();
-		int radius = Math.min(mb.framebufferWidth * outy, mb.framebufferHeight * outx);
-		Framebuffer fb = new Framebuffer(mb.framebufferWidth * outx * outy / radius, mb.framebufferHeight * outx * outy / radius, true);
-		fb.framebufferClear();
-		fb.bindFramebuffer(false);
-		
-		int r = radius * this.width / mb.framebufferWidth;
-		
-		AxisAlignedBB bb = entity.getEntityBoundingBox();
-		GlStateManager.pushMatrix();
-		GlStateManager.color(1, 1, 1);
-		float scale = (float)(size * 64) * r / outx / outy;
-		GlStateManager.translate(r / outy / 2, r / outx / 2, 0);
-		GlStateManager.scale(scale, scale, scale);
-		GlStateManager.translate(0, 0, 2.5 * (entity.height / 4 + entity.width / 2 * 0.866));
-		RenderHelper.enableGUIStandardItemLighting();
-		GlStateManager.rotate(150, 1, 0, 0);
-		GlStateManager.rotate(225 + globalSetting.rotation * 90, 0, 1, 0);
-		GlStateManager.scale(-1, 1, 1);
-		if(entity != null) {
-			GlStateManager.translate(0, (bb.minY - bb.maxY) / 2, 0);
-			((Render)mc.getRenderManager().entityRenderMap.get(entity.getClass())).doRender(entity, 0, 0, 0, 0, 0);
-		}
-		RenderHelper.disableStandardItemLighting();
-		GlStateManager.popMatrix();
-		
-		saveFrameBufferToFile(fb, f, outx, outy);
-
-		mb.bindFramebuffer(true);
-		fb.deleteFramebuffer();
-	}
+		int result;
+		do {
+			Framebuffer mb = mc.getFramebuffer();
+			int radius = Math.min(mb.framebufferWidth * outy, mb.framebufferHeight * outx);
+			Framebuffer fb = new Framebuffer(mb.framebufferWidth * outx * outy / radius, mb.framebufferHeight * outx * outy / radius, true);
+			fb.framebufferClear();
+			fb.bindFramebuffer(false);
+			
+			int r = radius * this.width / mb.framebufferWidth;
+			
+			AxisAlignedBB bb = entity.getEntityBoundingBox();
+			GlStateManager.pushMatrix();
+			GlStateManager.color(1, 1, 1);
+			float scale = (float)(size * 64) * r / outx / outy;
+			GlStateManager.translate(r / outy / 2, r / outx / 2, 0);
+			GlStateManager.scale(scale, scale, scale);
+			GlStateManager.translate(0, 0, 2.5 * (entity.height / 4 + entity.width / 2 * 0.866));
+			RenderHelper.enableGUIStandardItemLighting();
+			GlStateManager.rotate(150, 1, 0, 0);
+			GlStateManager.rotate(225 + globalSetting.rotation * 90, 0, 1, 0);
+			GlStateManager.scale(-1, 1, 1);
+			if(entity != null) {
+				GlStateManager.translate(0, (bb.minY - bb.maxY) / 2, 0);
+				((Render)mc.getRenderManager().entityRenderMap.get(entity.getClass())).doRender(entity, 0, 0, 0, 0, 0);
+			}
+			RenderHelper.disableStandardItemLighting();
+			GlStateManager.popMatrix();
+			
+			result = saveFrameBufferToFile(fb, f, outx, outy, true);
+			if((result & 1) != 0) {
+				outx *= 2;
+			}
+			if((result & 2) != 0) {
+				outy *= 2;
+			}
 	
+			mb.bindFramebuffer(true);
+			fb.deleteFramebuffer();
+		} while(result != 0);
+	}
+
 	private IntBuffer pixelBuffer;
 	private int[] pixelValues;
+	
+	private BufferedImage cutPicture(BufferedImage image, Rectangle bound) {
+		BufferedImage image2 = new BufferedImage(bound.width, bound.height, BufferedImage.TYPE_4BYTE_ABGR);
+		Graphics2D g = image2.createGraphics();
+		g.drawImage(image, -bound.x, -bound.y, null);
+		g.dispose();
+		return image2;
+	}
+	
+	private int compareImage(BufferedImage image, Rectangle bound) {
+		int r = 0;
+		if(bound.x == 0 || bound.x + bound.width == image.getWidth()) {
+			r |= 1;
+		}
+		if(bound.y == 0 || bound.y + bound.height == image.getHeight()) {
+			r |= 2;
+		}
+		return r;
+	}
 
-	private void saveFrameBufferToFile(Framebuffer buffer, File f, int width, int height) {
+	private Rectangle getImageBound(BufferedImage image) {
+		int h = image.getHeight();
+		int w = image.getWidth();
+		if(pixelValues.length < h * w) {
+			pixelValues = new int[h * w];
+		}
+		
+		image.getRGB(0, 0, w, h, pixelValues, 0, w);
+
+		int t, l, b, r;
+		o:for(t=0; t<h; t++) {
+			for(int i=0; i<w; i++) {
+				if((pixelValues[t*w+i] & 0xFF000000) != 0) {
+					break o;
+				}
+			}
+		}
+		o:for(b=h; b>0; b--) {
+			for(int i=0; i<w; i++) {
+				if((pixelValues[(b-1)*w+i] & 0xFF000000) != 0) {
+					break o;
+				}
+			}
+		}
+		o:for(l=0; l<w; l++) {
+			for(int i=0; i<h; i++) {
+				if((pixelValues[i*w+l] & 0xFF000000) != 0) {
+					break o;
+				}
+			}
+		}
+		o:for(r=w; r>0; r--) {
+			for(int i=0; i<h; i++) {
+				if((pixelValues[i*w+(r-1)] & 0xFF000000) != 0) {
+					break o;
+				}
+			}
+		}
+		
+		return new Rectangle(l, t, r-l, b-t);
+	}
+
+	private int saveFrameBufferToFile(Framebuffer buffer, File f, int width, int height, boolean cut) {
 		try {
 			int k = buffer.framebufferTextureWidth * buffer.framebufferTextureHeight;
 			if (pixelBuffer == null || pixelBuffer.capacity() < k) {
@@ -335,15 +408,23 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
             TextureUtil.processPixelValues(pixelValues, buffer.framebufferTextureWidth, buffer.framebufferTextureHeight);
 			BufferedImage bufferedimage = new BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR);
 			int l = buffer.framebufferTextureHeight - buffer.framebufferHeight;
-			for (int y = 0; y < height; ++y) {
-				for (int x = 0; x < width; ++x) {
-					bufferedimage.setRGB(x, y, pixelValues[(y + l) * buffer.framebufferTextureWidth + x]);
+			bufferedimage.setRGB(0, 0, width, height, pixelValues, l*buffer.framebufferTextureWidth, buffer.framebufferTextureWidth);
+			if(cut) {
+				Rectangle bound = getImageBound(bufferedimage);
+				int compareResult = compareImage(bufferedimage, bound);
+				if(compareResult == 0) {
+					bufferedimage = cutPicture(bufferedimage, bound);
+				} else {
+					return compareResult;
 				}
 			}
 			ImageIO.write(bufferedimage, "png", f);
 		} catch(Exception e) {
 			RenderToMod.logger.error("Cannot save framebuffer to file " + f);
+			RenderToMod.logger.error(e + ": " + e.getMessage());
+			RenderToMod.logger.error(Arrays.toString(e.getStackTrace()));
 		}
+		return 0;
 	}
 
 	public void listSelect(ItemScrollingList list, int index) {
@@ -480,7 +561,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 	public void onChangeSliderValue(GuiSlider slider) {
 		switch(slider.id) {
 		case 102:
-			globalSetting.size = slider.getValue();
+			globalSetting.size = MathHelper.floor_double(100 * slider.getValue()) / 100.0;
 			break;
 		}
 	}
