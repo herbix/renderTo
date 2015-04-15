@@ -17,8 +17,11 @@ import java.util.Map.Entry;
 
 import javax.imageio.ImageIO;
 
+import me.herbix.renderto.FakeItem;
 import me.herbix.renderto.RenderToMod;
 import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
@@ -27,8 +30,11 @@ import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.Render;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.client.renderer.texture.TextureUtil;
 import net.minecraft.client.resources.I18n;
+import net.minecraft.client.resources.model.IBakedModel;
 import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
@@ -69,8 +75,11 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 	
 	private Map<String, ItemStack> cachedItems = new HashMap<String, ItemStack>();
 	private Map<String, Entity> cachedEntities = new HashMap<String, Entity>();
+	private Map<String, IBlockState> cachedBlocks = new HashMap<String, IBlockState>();
 
 	private File saveDir;
+	
+	private FakeItem fakeItem = new FakeItem();
 
 	public RenderToGuiScreen(GuiScreen parent) {
 		this.parent = parent;
@@ -156,36 +165,100 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		String domain = domainListModel.get(domainListSelection);
 		String selected = itemListModel.get(itemListSelection);
 		if(selectedButton == 0) {
-			GlStateManager.pushMatrix();
-			GlStateManager.translate(left, top, 50);
-			GlStateManager.scale(radius/16.0, radius/16.0, radius/16.0);
-			GlStateManager.translate(0, 0, -radius/4);
-	        RenderHelper.enableGUIStandardItemLighting();
-			GlStateManager.color(1, 1, 1);
-			ItemStack stack = cachedItems.get(selected);
-			mc.getRenderItem().renderItemIntoGUI(stack, 0, 0);
-			GlStateManager.popMatrix();
-			RenderHelper.disableStandardItemLighting();
+			drawItem(radius, left, top, selected);
+		} else if(selectedButton == 1) {
+			drawBlock(radius, left, top, selected);
 		} else if(selectedButton == 2) {
-			Entity entity = cachedEntities.get(domain.equals("minecraft") ? selected : (domain + "." + selected));
-			AxisAlignedBB bb = entity.getEntityBoundingBox();
-			GlStateManager.pushMatrix();
-			GlStateManager.color(1, 1, 1);
-			float f = (float)(globalSetting.size * 32);
-			GlStateManager.translate(cxm2 / 2, cym2 / 2, 0);
-			GlStateManager.scale(f, f, f);
-			GlStateManager.translate(0, 0, 2.5 * (entity.height / 4 + entity.width / 2 * 0.866));
-			RenderHelper.enableGUIStandardItemLighting();
-			GlStateManager.rotate(150, 1, 0, 0);
-			GlStateManager.rotate(225 + globalSetting.rotation * 90, 0, 1, 0);
-			GlStateManager.scale(-1, 1, 1);
-			if(entity != null) {
-				GlStateManager.translate(0, (bb.minY - bb.maxY) / 2, 0);
-				((Render)mc.getRenderManager().entityRenderMap.get(entity.getClass())).doRender(entity, 0, 0, 0, 0, 0);
-			}
-			RenderHelper.disableStandardItemLighting();
-			GlStateManager.popMatrix();
+			drawEntity(cxm2, cym2, domain, selected);
 		}
+	}
+
+	private void drawBlock(int radius, int left, int top, String selected) {
+		GlStateManager.pushMatrix();
+		GlStateManager.translate(left, top, 50);
+		GlStateManager.scale(radius/16.0, radius/16.0, radius/16.0);
+		GlStateManager.translate(0, 0, -radius/4);
+		RenderHelper.enableGUIStandardItemLighting();
+		GlStateManager.color(1, 1, 1);
+		
+		TextureManager textureManager = Minecraft.getMinecraft().getTextureManager();
+		IBlockState state = cachedBlocks.get(selected);
+		IBakedModel ibakedmodel = mc.getBlockRendererDispatcher().getBlockModelShapes().getModelForState(state);
+		GlStateManager.pushMatrix();
+		textureManager.bindTexture(TextureMap.locationBlocksTexture);
+		textureManager.getTexture(TextureMap.locationBlocksTexture).setBlurMipmap(false, false);
+		GlStateManager.enableRescaleNormal();
+		GlStateManager.enableAlpha();
+		GlStateManager.alphaFunc(516, 0.1F);
+		GlStateManager.enableBlend();
+		GlStateManager.blendFunc(770, 771);
+		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+		
+		GlStateManager.translate(0, 0, 100.0F + mc.getRenderItem().zLevel);
+		GlStateManager.translate(8.0F, 8.0F, 0.0F);
+		GlStateManager.scale(1.0F, 1.0F, -1.0F);
+		GlStateManager.scale(0.5F, 0.5F, 0.5F);
+		
+		if (ibakedmodel.isGui3d()) {
+		    GlStateManager.scale(40.0F, 40.0F, 40.0F);
+		    GlStateManager.rotate(210.0F, 1.0F, 0.0F, 0.0F);
+		    GlStateManager.rotate(-135.0F, 0.0F, 1.0F, 0.0F);
+		    GlStateManager.enableLighting();
+		} else {
+		    GlStateManager.scale(64.0F, 64.0F, 64.0F);
+		    GlStateManager.rotate(180.0F, 1.0F, 0.0F, 0.0F);
+		    GlStateManager.disableLighting();
+		}
+		
+		GlStateManager.rotate(90 * globalSetting.rotation, 0, 1, 0);
+		
+		fakeItem.setWorld(mc.theWorld);
+		fakeItem.setForBlock(state);
+		mc.getRenderItem().renderItem(new ItemStack(fakeItem), ibakedmodel);
+
+		GlStateManager.disableAlpha();
+		GlStateManager.disableRescaleNormal();
+		GlStateManager.disableLighting();
+		GlStateManager.popMatrix();
+		textureManager.bindTexture(TextureMap.locationBlocksTexture);
+		textureManager.getTexture(TextureMap.locationBlocksTexture).restoreLastBlurMipmap();
+		
+		GlStateManager.popMatrix();
+		RenderHelper.disableStandardItemLighting();
+	}
+
+	private void drawEntity(int cxm2, int cym2, String domain, String selected) {
+		Entity entity = cachedEntities.get(domain.equals("minecraft") ? selected : (domain + "." + selected));
+		AxisAlignedBB bb = entity.getEntityBoundingBox();
+		GlStateManager.pushMatrix();
+		GlStateManager.color(1, 1, 1);
+		float f = (float)(globalSetting.size * 32);
+		GlStateManager.translate(cxm2 / 2, cym2 / 2, 0);
+		GlStateManager.scale(f, f, f);
+		GlStateManager.translate(0, 0, 2.5 * (entity.height / 4 + entity.width / 2 * 0.866));
+		RenderHelper.enableGUIStandardItemLighting();
+		GlStateManager.rotate(150, 1, 0, 0);
+		GlStateManager.rotate(225 + globalSetting.rotation * 90, 0, 1, 0);
+		GlStateManager.scale(-1, 1, 1);
+		if(entity != null) {
+			GlStateManager.translate(0, (bb.minY - bb.maxY) / 2, 0);
+			((Render)mc.getRenderManager().entityRenderMap.get(entity.getClass())).doRender(entity, 0, 0, 0, 0, 0);
+		}
+		RenderHelper.disableStandardItemLighting();
+		GlStateManager.popMatrix();
+	}
+
+	private void drawItem(int radius, int left, int top, String selected) {
+		GlStateManager.pushMatrix();
+		GlStateManager.translate(left, top, 50);
+		GlStateManager.scale(radius/16.0, radius/16.0, radius/16.0);
+		GlStateManager.translate(0, 0, -radius/4);
+		RenderHelper.enableGUIStandardItemLighting();
+		GlStateManager.color(1, 1, 1);
+		ItemStack stack = cachedItems.get(selected);
+		mc.getRenderItem().renderItemIntoGUI(stack, 0, 0);
+		GlStateManager.popMatrix();
+		RenderHelper.disableStandardItemLighting();
 	}
 
 	@Override
@@ -490,7 +563,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 				if((index < 0 && domain.equals("minecraft.")) || name.startsWith(domain)) {
 					itemListModel.remove(index < 0 ? name : name.substring(index + 1));
 					itemListModel.add(e.getKey());
-					cachedEntities.put(e.getKey(), e.getValue());
+					cachedEntities.put((index < 0 ? "" : domain) + e.getKey(), e.getValue());
 				}
 			}
 		}
@@ -501,11 +574,27 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 	private void setupBlockList() {
 		String domain = domainListModel.get(domainListSelection) + ":";
 		FMLControlledNamespacedRegistry<Block> r1 = GameData.getBlockRegistry();
+		
+		cachedBlocks.clear();
 		for(Object keyobj : r1.getKeys()) {
 			String name = keyobj.toString();
 			int index = name.indexOf(':');
 			if((index < 0 && domain.equals("minecraft:")) || name.startsWith(domain)) {
-				itemListModel.add(index < 0 ? name : name.substring(index + 1));
+				String blockName = index < 0 ? name : name.substring(index + 1);
+				Block block = r1.getObject(name);
+				List<IBlockState> states = block.getBlockState().getValidStates();
+				if(states.size() == 1) {
+					itemListModel.add(blockName);
+					cachedBlocks.put(blockName, block.getDefaultState());
+				} else {
+					int i = 0;
+					for(IBlockState state : states) {
+						String stateName = String.format("%s:%04d", blockName, i);
+						itemListModel.add(stateName);
+						cachedBlocks.put(stateName, state);
+						i++;
+					}
+				}
 			}
 		}
 	}

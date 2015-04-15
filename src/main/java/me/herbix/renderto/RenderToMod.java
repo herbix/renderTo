@@ -60,7 +60,6 @@ public class RenderToMod implements IRenderToApiEntry {
 	
 	@EventHandler
 	public void init(FMLInitializationEvent event) {
-		System.out.println("init");
 		Minecraft.getMinecraft().getRenderItem().getItemModelMesher().register(renderToItem, 0, new ModelResourceLocation("renderto:render_to", "inventory"));
 		DefaultRenderToApiRegister.instance.register(this);
 		gui = new RenderToGuiScreen(Minecraft.getMinecraft().currentScreen);
