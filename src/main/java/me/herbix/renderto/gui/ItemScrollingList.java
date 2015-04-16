@@ -42,7 +42,8 @@ public class ItemScrollingList extends GuiScrollingList {
 
 	@Override
 	protected void drawSlot(int index, int var2, int var3, int var4, Tessellator var5) {
-		this.parent.getFontRenderer().drawString(this.parent.getFontRenderer().trimStringToWidth(list.get(index).toString(), listWidth - 10), this.left + 3 , var3 + 2, 0xFFFFFF);
+		String showName = list.get(index).toString();
+		this.parent.getFontRenderer().drawString(this.parent.getFontRenderer().trimStringToWidth(showName, listWidth - 10), this.left + 3 , var3 + 2, 0xFFFFFF);
 	}
 	
 	@Override
@@ -51,9 +52,10 @@ public class ItemScrollingList extends GuiScrollingList {
         int scrollBarXStart = this.left + this.listWidth - 6;
         int scrollBarXEnd = scrollBarXStart + 6;
         int boxLeft = this.left;
-        int boxRight = scrollBarXStart-1;
-        
+        int boxRight = scrollBarXStart - 1;
+
 		super.drawScreen(mouseX, mouseY, p_22243_3_);
+		
         this.overlayBackground(0, this.top, 255, 255);
         this.overlayBackground(this.bottom, this.listHeight, 255, 255);
 	}
@@ -74,5 +76,17 @@ public class ItemScrollingList extends GuiScrollingList {
         worldr.addVertexWithUV(0.0D, p_22239_1_, 0.0D, 0.0D, p_22239_1_ / var6);
         var5.draw();
     }
+
+	public int getWidth() {
+		return listWidth;
+	}
+	
+	public int getTop() {
+		return top;
+	}
+	
+	public int getBottom() {
+		return bottom;
+	}
 
 }

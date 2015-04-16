@@ -11,9 +11,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 
@@ -63,6 +65,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 	private ItemScrollingList itemList;
 	private GuiButton[] switches = new GuiButton[3];
 	private GuiTextField sizeOutput;
+	private GuiTextField filter;
 
 	private List<String> domainListModel = new ArrayList<String>();
 	private List<String> itemListModel = new ArrayList<String>();
@@ -76,6 +79,9 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 	private Map<String, ItemStack> cachedItems = new HashMap<String, ItemStack>();
 	private Map<String, Entity> cachedEntities = new HashMap<String, Entity>();
 	private Map<String, IBlockState> cachedBlocks = new HashMap<String, IBlockState>();
+	
+	private String currentFilter = "";
+	private String currentFilterPattern = "(.*)";
 
 	private File saveDir;
 	
@@ -96,7 +102,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		buttonList.add(switches[2] = new GuiButton(100, width - 60, 10, 50, 20, i18n("entity")));
 		switches[selectedButton].enabled = false;
 
-		domainList = new ItemScrollingList(this, domainListModel, (int)(width * 0.35) - 15, (int)(this.height * 0.4) + 5, 10, (int)(this.height * 0.4) - 5, 10);
+		domainList = new ItemScrollingList(this, domainListModel, (int)(width * 0.35) - 15, (int)(this.height * 0.4) + 5, 10, (int)(this.height * 0.4) - 25, 10);
 		itemList = new ItemScrollingList(this, itemListModel, (int)(width * 0.35) - 15, height, (int)(this.height * 0.4) + 5, this.height - 40, 10);
 
 		buttonList.add(new GuiButton(103, (int)(width * 0.35) + 5, height - 60, 30, 20, i18n("left")));
@@ -111,9 +117,11 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		slider.updateSlider();
 		
 		sizeOutput = new GuiTextField(107, fontRendererObj, (int)(width * 0.35) + 105, height - 59, width - (int)(width * 0.35) - 236, 18);
-		sizeOutput.setFocused(true);
 		sizeOutput.setText(String.valueOf(globalSetting.outputSize));
 		sizeOutput.setMaxStringLength(3);
+
+		filter = new GuiTextField(108, fontRendererObj, 11, (int)(this.height * 0.4) - 15, (int)(width * 0.35) - 17, 18);
+		filter.setText(currentFilter);
 		
 		saveDir = new File(mc.mcDataDir, "/RenderTo");
 	}
@@ -139,8 +147,19 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		itemList.drawScreen(mouseX, mouseY, tickTime);
 		domainList.drawScreen(mouseX, mouseY, tickTime);
 		sizeOutput.drawTextBox();
+		filter.drawTextBox();
 		
 		super.drawScreen(mouseX, mouseY, tickTime);
+
+		if(mouseY >= itemList.getTop() && mouseY < itemList.getBottom()) {
+			int index = itemList.func_27256_c(mouseX, mouseY);
+			if(index >= 0 && index < itemListModel.size()) {
+				String showName = itemListModel.get(index);
+				if(fontRendererObj.getStringWidth(showName) + 6 > itemList.getWidth()) {
+					drawHoveringText(Arrays.asList(showName.trim().substring(0, showName.length() - 1).split("[\\[,]{1}")), mouseX, mouseY);
+				}
+			}
+		}
 	}
 
 	private void drawRenderBox() {
@@ -181,47 +200,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		RenderHelper.enableGUIStandardItemLighting();
 		GlStateManager.color(1, 1, 1);
 		
-		TextureManager textureManager = Minecraft.getMinecraft().getTextureManager();
-		IBlockState state = cachedBlocks.get(selected);
-		IBakedModel ibakedmodel = mc.getBlockRendererDispatcher().getBlockModelShapes().getModelForState(state);
-		GlStateManager.pushMatrix();
-		textureManager.bindTexture(TextureMap.locationBlocksTexture);
-		textureManager.getTexture(TextureMap.locationBlocksTexture).setBlurMipmap(false, false);
-		GlStateManager.enableRescaleNormal();
-		GlStateManager.enableAlpha();
-		GlStateManager.alphaFunc(516, 0.1F);
-		GlStateManager.enableBlend();
-		GlStateManager.blendFunc(770, 771);
-		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-		
-		GlStateManager.translate(0, 0, 100.0F + mc.getRenderItem().zLevel);
-		GlStateManager.translate(8.0F, 8.0F, 0.0F);
-		GlStateManager.scale(1.0F, 1.0F, -1.0F);
-		GlStateManager.scale(0.5F, 0.5F, 0.5F);
-		
-		if (ibakedmodel.isGui3d()) {
-		    GlStateManager.scale(40.0F, 40.0F, 40.0F);
-		    GlStateManager.rotate(210.0F, 1.0F, 0.0F, 0.0F);
-		    GlStateManager.rotate(-135.0F, 0.0F, 1.0F, 0.0F);
-		    GlStateManager.enableLighting();
-		} else {
-		    GlStateManager.scale(64.0F, 64.0F, 64.0F);
-		    GlStateManager.rotate(180.0F, 1.0F, 0.0F, 0.0F);
-		    GlStateManager.disableLighting();
-		}
-		
-		GlStateManager.rotate(90 * globalSetting.rotation, 0, 1, 0);
-		
-		fakeItem.setWorld(mc.theWorld);
-		fakeItem.setForBlock(state);
-		mc.getRenderItem().renderItem(new ItemStack(fakeItem), ibakedmodel);
-
-		GlStateManager.disableAlpha();
-		GlStateManager.disableRescaleNormal();
-		GlStateManager.disableLighting();
-		GlStateManager.popMatrix();
-		textureManager.bindTexture(TextureMap.locationBlocksTexture);
-		textureManager.getTexture(TextureMap.locationBlocksTexture).restoreLastBlurMipmap();
+		drawBlockCore(selected);
 		
 		GlStateManager.popMatrix();
 		RenderHelper.disableStandardItemLighting();
@@ -237,13 +216,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		GlStateManager.scale(f, f, f);
 		GlStateManager.translate(0, 0, 2.5 * (entity.height / 4 + entity.width / 2 * 0.866));
 		RenderHelper.enableGUIStandardItemLighting();
-		GlStateManager.rotate(150, 1, 0, 0);
-		GlStateManager.rotate(225 + globalSetting.rotation * 90, 0, 1, 0);
-		GlStateManager.scale(-1, 1, 1);
-		if(entity != null) {
-			GlStateManager.translate(0, (bb.minY - bb.maxY) / 2, 0);
-			((Render)mc.getRenderManager().entityRenderMap.get(entity.getClass())).doRender(entity, 0, 0, 0, 0, 0);
-		}
+		drawEntityCore(entity, bb);
 		RenderHelper.disableStandardItemLighting();
 		GlStateManager.popMatrix();
 	}
@@ -255,8 +228,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		GlStateManager.translate(0, 0, -radius/4);
 		RenderHelper.enableGUIStandardItemLighting();
 		GlStateManager.color(1, 1, 1);
-		ItemStack stack = cachedItems.get(selected);
-		mc.getRenderItem().renderItemIntoGUI(stack, 0, 0);
+		drawItemCore(selected);
 		GlStateManager.popMatrix();
 		RenderHelper.disableStandardItemLighting();
 	}
@@ -298,11 +270,20 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		}
 	}
 	
+	@Override
+	protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
+		super.mouseClicked(mouseX, mouseY, mouseButton);
+		filter.mouseClicked(mouseX, mouseY, mouseButton);
+		sizeOutput.mouseClicked(mouseX, mouseY, mouseButton);
+	}
+	
 	private void saveAll() {
 		String domain = domainListModel.get(domainListSelection);
 		for(String selected : itemListModel) {
 			if(selectedButton == 0) {
 				saveItemPic(domain, selected, globalSetting.outputSize);
+			} else if(selectedButton == 1) {
+				saveBlockPic(domain, selected, globalSetting.outputSize);
 			} else if(selectedButton == 2) {
 				saveEntityPic(domain, selected, globalSetting.size);
 			}
@@ -314,13 +295,15 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		String selected = itemListModel.get(itemListSelection);
 		if(selectedButton == 0) {
 			saveItemPic(domain, selected, globalSetting.outputSize);
+		} else if(selectedButton == 1) {
+			saveBlockPic(domain, selected, globalSetting.outputSize);
 		} else if(selectedButton == 2) {
 			saveEntityPic(domain, selected, globalSetting.size);
 		}
 	}
 
-	private void saveItemPic(String domain, String selected, int outputSize) {
-		File f = new File(saveDir, domain + "/item/" + outputSize + "x/" + selected.replaceAll("[\\\\\\/\\?\\:\\>\\<\\|\\*\\\"]{1}", "_") + ".png");
+	private void saveBlockPic(String domain, String selected, int outputSize) {
+		File f = new File(saveDir, domain + "/block/" + outputSize + "x/" + selected.replaceAll("[^0-9a-zA-Z]{1}", "_") + ".png");
 		f.getParentFile().mkdirs();
 
 		Framebuffer mb = mc.getFramebuffer();
@@ -337,8 +320,9 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		GlStateManager.translate(0, 0, -r/4);
         RenderHelper.enableGUIStandardItemLighting();
 		GlStateManager.color(1, 1, 1);
-		ItemStack stack = cachedItems.get(selected);
-		mc.getRenderItem().renderItemIntoGUI(stack, 0, 0);
+
+		drawBlockCore(selected);
+		
 		GlStateManager.popMatrix();
 		RenderHelper.disableStandardItemLighting();
 		
@@ -346,6 +330,83 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		
 		mb.bindFramebuffer(true);
 		fb.deleteFramebuffer();
+	}
+
+	private void drawBlockCore(String selected) {
+		TextureManager textureManager = Minecraft.getMinecraft().getTextureManager();
+		IBlockState state = cachedBlocks.get(selected);
+		IBakedModel ibakedmodel = mc.getBlockRendererDispatcher().getBlockModelShapes().getModelForState(state);
+		GlStateManager.pushMatrix();
+		textureManager.bindTexture(TextureMap.locationBlocksTexture);
+		textureManager.getTexture(TextureMap.locationBlocksTexture).setBlurMipmap(false, false);
+		GlStateManager.enableRescaleNormal();
+		GlStateManager.enableAlpha();
+		GlStateManager.alphaFunc(516, 0.1F);
+		GlStateManager.enableBlend();
+		GlStateManager.blendFunc(770, 771);
+		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+		
+		GlStateManager.translate(0, 0, 100.0F + mc.getRenderItem().zLevel);
+		GlStateManager.translate(8.0F, 8.0F, 0.0F);
+		GlStateManager.scale(1.0F, 1.0F, -1.0F);
+		GlStateManager.scale(0.5F, 0.5F, 0.5F);
+		
+		if (ibakedmodel.isGui3d()) {
+		    GlStateManager.scale(40.0F, 40.0F, 40.0F);
+		    GlStateManager.rotate(210.0F, 1.0F, 0.0F, 0.0F);
+		    GlStateManager.rotate(-135.0F, 0.0F, 1.0F, 0.0F);
+		    GlStateManager.enableLighting();
+		} else {
+		    GlStateManager.scale(64.0F, 64.0F, 64.0F);
+		    GlStateManager.rotate(180.0F, 1.0F, 0.0F, 0.0F);
+		    GlStateManager.disableLighting();
+		}
+		
+		GlStateManager.rotate(90 * globalSetting.rotation, 0, 1, 0);
+		
+		fakeItem.setWorld(mc.theWorld);
+		fakeItem.setForBlock(state);
+		mc.getRenderItem().renderItem(new ItemStack(fakeItem), ibakedmodel);
+
+		GlStateManager.disableAlpha();
+		GlStateManager.disableRescaleNormal();
+		GlStateManager.disableLighting();
+		GlStateManager.popMatrix();
+		textureManager.bindTexture(TextureMap.locationBlocksTexture);
+		textureManager.getTexture(TextureMap.locationBlocksTexture).restoreLastBlurMipmap();
+	}
+
+	private void saveItemPic(String domain, String selected, int outputSize) {
+		File f = new File(saveDir, domain + "/item/" + outputSize + "x/" + selected.replaceAll("[^0-9a-zA-Z]{1}", "_") + ".png");
+		f.getParentFile().mkdirs();
+
+		Framebuffer mb = mc.getFramebuffer();
+		int radius = Math.min(mb.framebufferWidth, mb.framebufferHeight);
+		Framebuffer fb = new Framebuffer(mb.framebufferWidth * outputSize / radius, mb.framebufferHeight * outputSize / radius, true);
+		fb.framebufferClear();
+		fb.bindFramebuffer(false);
+		
+		int r = radius * this.width / mb.framebufferWidth;
+
+		GlStateManager.pushMatrix();
+		GlStateManager.translate(0, 0, 50);
+		GlStateManager.scale(r/16.0, r/16.0, r/16.0);
+		GlStateManager.translate(0, 0, -r/4);
+        RenderHelper.enableGUIStandardItemLighting();
+		GlStateManager.color(1, 1, 1);
+		drawItemCore(selected);
+		GlStateManager.popMatrix();
+		RenderHelper.disableStandardItemLighting();
+		
+		saveFrameBufferToFile(fb, f, outputSize, outputSize, false);
+		
+		mb.bindFramebuffer(true);
+		fb.deleteFramebuffer();
+	}
+
+	private void drawItemCore(String selected) {
+		ItemStack stack = cachedItems.get(selected);
+		mc.getRenderItem().renderItemIntoGUI(stack, 0, 0);
 	}
 
 	private void saveEntityPic(String domain, String selected, double size) {
@@ -378,13 +439,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 			GlStateManager.scale(scale, scale, scale);
 			GlStateManager.translate(0, 0, 2.5 * (entity.height / 4 + entity.width / 2 * 0.866));
 			RenderHelper.enableGUIStandardItemLighting();
-			GlStateManager.rotate(150, 1, 0, 0);
-			GlStateManager.rotate(225 + globalSetting.rotation * 90, 0, 1, 0);
-			GlStateManager.scale(-1, 1, 1);
-			if(entity != null) {
-				GlStateManager.translate(0, (bb.minY - bb.maxY) / 2, 0);
-				((Render)mc.getRenderManager().entityRenderMap.get(entity.getClass())).doRender(entity, 0, 0, 0, 0, 0);
-			}
+			drawEntityCore(entity, bb);
 			RenderHelper.disableStandardItemLighting();
 			GlStateManager.popMatrix();
 			
@@ -399,6 +454,16 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 			mb.bindFramebuffer(true);
 			fb.deleteFramebuffer();
 		} while(result != 0);
+	}
+
+	private void drawEntityCore(Entity entity, AxisAlignedBB bb) {
+		GlStateManager.rotate(150, 1, 0, 0);
+		GlStateManager.rotate(225 + globalSetting.rotation * 90, 0, 1, 0);
+		GlStateManager.scale(-1, 1, 1);
+		if(entity != null) {
+			GlStateManager.translate(0, (bb.minY - bb.maxY) / 2, 0);
+			((Render)mc.getRenderManager().entityRenderMap.get(entity.getClass())).doRender(entity, 0, 0, 0, 0, 0);
+		}
 	}
 
 	private IntBuffer pixelBuffer;
@@ -567,6 +632,14 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 				}
 			}
 		}
+		
+		for(Iterator<String> it = itemListModel.iterator(); it.hasNext(); ) {
+			String name = it.next();
+			if(!checkMatches(name, currentFilterPattern)) {
+				it.remove();
+				cachedEntities.remove(name);
+			}
+		}
 
 		cachedEntities.put("global setting", new EntityZombie(theWorld));
 	}
@@ -584,15 +657,19 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 				Block block = r1.getObject(name);
 				List<IBlockState> states = block.getBlockState().getValidStates();
 				if(states.size() == 1) {
-					itemListModel.add(blockName);
-					cachedBlocks.put(blockName, block.getDefaultState());
+					if(checkMatches(blockName, currentFilterPattern)) {
+						itemListModel.add(blockName);
+						cachedBlocks.put(blockName, block.getDefaultState());
+					}
 				} else {
-					int i = 0;
 					for(IBlockState state : states) {
-						String stateName = String.format("%s:%04d", blockName, i);
-						itemListModel.add(stateName);
-						cachedBlocks.put(stateName, state);
-						i++;
+						String stateString = state.toString();
+						int indexOf = stateString.indexOf(':');
+						String stateName = indexOf < 0 ? stateString : stateString.substring(indexOf + 1);
+						if(checkMatches(stateName, currentFilterPattern)) {
+							itemListModel.add(stateName);
+							cachedBlocks.put(stateName, state);
+						}
 					}
 				}
 			}
@@ -619,14 +696,34 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 					int id = 0;
 					for(ItemStack stack : itemStacks) {
 						String indexName = String.format("%s:%03d", fillName, id++);
-						itemListModel.add(indexName);
-						cachedItems.put(indexName, stack);
+						if(checkMatches(indexName, currentFilterPattern)) {
+							itemListModel.add(indexName);
+							cachedItems.put(indexName, stack);
+						}
 					}
 				} else {
-					itemListModel.add(fillName);
-					cachedItems.put(fillName, new ItemStack(r1.getObject(name)));
+					if(checkMatches(fillName, currentFilterPattern)) {
+						itemListModel.add(fillName);
+						cachedItems.put(fillName, new ItemStack(r1.getObject(name)));
+					}
 				}
 			}
+		}
+	}
+	
+	private Pattern savedPattern;
+	private String oldPatternString;
+	
+	private boolean checkMatches(String string, String pattern) {
+		if(oldPatternString == pattern) {
+			return savedPattern.matcher(string).matches();
+		}
+		try {
+			savedPattern = Pattern.compile(pattern);
+			oldPatternString = pattern;
+			return savedPattern.matcher(string).matches();
+		} catch(Exception e) {
+			return false;
 		}
 	}
 
@@ -664,6 +761,18 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 			} catch(NumberFormatException e) {
 				globalSetting.outputSize = 150;
 			}
+			if(globalSetting.outputSize <= 0) {
+				globalSetting.outputSize = 1;
+			}
+		} else if(filter.isFocused()) {
+			filter.textboxKeyTyped(typedChar, keyCode);
+			currentFilter = filter.getText();
+			if(currentFilter.length() == 0) {
+				currentFilterPattern = "(.*)";
+			} else {
+				currentFilterPattern = "(.*)" + currentFilter + "(.*)";
+			}
+			selectDomainList(domainListSelection);
 		}
 	}
 
