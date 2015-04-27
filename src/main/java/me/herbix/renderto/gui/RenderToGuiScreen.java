@@ -105,13 +105,15 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		domainList = new ItemScrollingList(this, domainListModel, (int)(width * 0.35) - 15, (int)(this.height * 0.4) + 5, 10, (int)(this.height * 0.4) - 25, 10);
 		itemList = new ItemScrollingList(this, itemListModel, (int)(width * 0.35) - 15, height, (int)(this.height * 0.4) + 5, this.height - 40, 10);
 
-		buttonList.add(new GuiButton(103, (int)(width * 0.35) + 5, height - 60, 30, 20, i18n("left")));
-		buttonList.add(new GuiButton(104, (int)(width * 0.35) + 35, height - 60, 30, 20, i18n("right")));
+		int sliderXPos = (int) (width * 0.35) + 5;
+		int sliderXSize = (width - (int) (width * 0.35) - 15) / 2;
+		GuiSlider rotSlider = new GuiSlider(103, sliderXPos, height - 80, sliderXSize, 20, "", " Rotation", 0, 360, globalSetting.rotation, true, true, this);
+		buttonList.add(rotSlider);
 
 		buttonList.add(new GuiButton(105, width - 130, height - 60, 60, 20, i18n("save")));
 		buttonList.add(new GuiButton(106, width - 70, height - 60, 60, 20, i18n("saveall")));
 		
-		GuiSlider slider = new GuiSlider(102, (int)(width * 0.35) + 5, height - 80, width - (int)(width * 0.35) - 15, 20, "", "x", 0.1, 2, globalSetting.size, true, true, this);
+		GuiSlider slider = new GuiSlider(102, sliderXPos + sliderXSize, height - 80, sliderXSize, 20, "", "x", 0.1, 2, globalSetting.size, true, true, this);
 		buttonList.add(slider);
 		slider.precision = 2;
 		slider.updateSlider();
@@ -252,12 +254,16 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 			button.enabled = false;
 			selectDomainList(domainListSelection);
 			break;
-		case 103:
-			globalSetting.rotation = (globalSetting.rotation + 1) % 4;
+/*		case 103:
+			globalSetting.rotation ++;
+			if (globalSetting.rotation >= 360) globalSetting.rotation = 0;
+			System.out.println(globalSetting.rotation);
 			break;
 		case 104:
-			globalSetting.rotation = (globalSetting.rotation + 3) % 4;
-			break;
+			globalSetting.rotation --;
+			if (globalSetting.rotation <= -360) globalSetting.rotation = 0;
+			System.out.println(globalSetting.rotation);
+			break;*/
 		case 105:
 			saveCurrentSelection();
 			break;
@@ -362,7 +368,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		    GlStateManager.disableLighting();
 		}
 		
-		GlStateManager.rotate(90 * globalSetting.rotation, 0, 1, 0);
+		GlStateManager.rotate(globalSetting.rotation, 0, 1, 0);
 		
 		fakeItem.setWorld(mc.theWorld);
 		fakeItem.setForBlock(state);
@@ -458,7 +464,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 
 	private void drawEntityCore(Entity entity, AxisAlignedBB bb) {
 		GlStateManager.rotate(150, 1, 0, 0);
-		GlStateManager.rotate(225 + globalSetting.rotation * 90, 0, 1, 0);
+		GlStateManager.rotate(225 + globalSetting.rotation, 0, 1, 0);
 		GlStateManager.scale(-1, 1, 1);
 		if(entity != null) {
 			GlStateManager.translate(0, (bb.minY - bb.maxY) / 2, 0);
@@ -748,6 +754,9 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		switch(slider.id) {
 		case 102:
 			globalSetting.size = MathHelper.floor_double(100 * slider.getValue()) / 100.0;
+			break;
+		case 103:
+			globalSetting.rotation = (int) (MathHelper.floor_double(100 * slider.getValue()) / 100.0);
 			break;
 		}
 	}
