@@ -12,6 +12,6 @@ gui.renderto.left=<-
 gui.renderto.right=->
 gui.renderto.save=Save
 gui.renderto.saveall=Save All
-gui.renderto.outputsize=Size:
-
-
+gui.renderto.outputsize=(Image Size)
+gui.renderto.lockyes=Lock To 90 (Yes)
+gui.renderto.lockno=Lock To 90 (No)
