@@ -7,7 +7,7 @@ presenting mod item, block and mobs, just like <a href="http://minecraft.gameped
 Minecraft Wiki</a> does.
 
 <h2>Download & Installation</h2>
-Latest Release: <a href="https://github.com/herbix/renderTo/raw/master/build/libs/RenderTo-0.2.0.jar">RenderTo-0.2.0.jar</a>
+Latest Release: <a href="https://github.com/herbix/renderTo/raw/master/build/libs/RenderTo-0.3.0.jar">RenderTo-0.3.0.jar</a>
 
 RenderTo can be installed in the same way as other mods by putting "RenderTo-x.x.x.jar" into
 "mods" directory.
@@ -34,11 +34,11 @@ would be stored in a file with following path:
 Also, clicking "Save All" would save all items in left-bottom list. It would cost much time and
 Minecraft won't response your input during it. Wait for it and it would finish after all.
 
-For item type rendering, change "size" textfield would change the output picture size.
+For item type rendering, change "Image Size" textfield would change the output picture size.
 
-For block type rendering, the model could rotate, and change "size" textfield would change the output picture size.
+For block type rendering, the model could rotate, and change "Image Size" textfield would change the output picture size.
 
-For entity type rendering, the model could rotate and scale. But "size" textfield has no effect.
+For entity type rendering, the model could rotate and scale.
 
 <h2>Gallery</h2>
 

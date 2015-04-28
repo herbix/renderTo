@@ -25,7 +25,6 @@ import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
@@ -48,6 +47,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
+import net.minecraftforge.fml.client.config.GuiCheckBox;
 import net.minecraftforge.fml.client.config.GuiSlider;
 import net.minecraftforge.fml.client.config.GuiSlider.ISlider;
 import net.minecraftforge.fml.common.Loader;
@@ -62,7 +62,7 @@ import org.lwjgl.opengl.GL12;
 public class RenderToGuiScreen extends GuiScreen implements ISlider {
 	
 	private GuiScreen parent;
-	private GuiSlider rotSlider;
+	private GuiSlider rotationSlider;
 	private ItemScrollingList domainList;
 	private ItemScrollingList itemList;
 	private GuiButton[] switches = new GuiButton[3];
@@ -77,7 +77,6 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 	private int selectedButton = 0;
 	
 	private int sliderXPos = 0;
-	private int sliderXSize = 0;
 	
 	private RenderSetting globalSetting = new RenderSetting();
 	
@@ -87,6 +86,8 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 	
 	private String currentFilter = "";
 	private String currentFilterPattern = "(.*)";
+
+	private boolean saveGif = false;
 
 	private File saveDir;
 	
@@ -100,6 +101,16 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 	@Override
 	public void initGui() {
 		super.initGui();
+
+		domainList = new ItemScrollingList(this, domainListModel, (int)(width * 0.35) - 15, (int)(this.height * 0.4) + 5, 10, (int)(this.height * 0.4) - 25, 10);
+		itemList = new ItemScrollingList(this, itemListModel, (int)(width * 0.35) - 15, height, (int)(this.height * 0.4) + 5, this.height - 40, 10);
+
+		initButtonList();
+		
+		saveDir = new File(mc.mcDataDir, "/RenderTo");
+	}
+
+	private void initButtonList() {
 		buttonList.clear();
 		buttonList.add(new GuiButton(200, 11, height - 30, (int)(width * 0.35) - 17, 20, I18n.format("gui.done")));
 		buttonList.add(switches[0] = new GuiButton(100, width - 160, 10, 50, 20, i18n("item")));
@@ -107,32 +118,46 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		buttonList.add(switches[2] = new GuiButton(100, width - 60, 10, 50, 20, i18n("entity")));
 		switches[selectedButton].enabled = false;
 
-		domainList = new ItemScrollingList(this, domainListModel, (int)(width * 0.35) - 15, (int)(this.height * 0.4) + 5, 10, (int)(this.height * 0.4) - 25, 10);
-		itemList = new ItemScrollingList(this, itemListModel, (int)(width * 0.35) - 15, height, (int)(this.height * 0.4) + 5, this.height - 40, 10);
-
 		sliderXPos = (int) (width * 0.35) + 5;
-		sliderXSize = (width - (int) (width * 0.35) - 15) / 2;
-		rotSlider = new GuiSlider(103, sliderXPos, height - 80, sliderXSize, 20, "", " Rotation", 0, 360, globalSetting.rotation, true, true, this);
-		buttonList.add(rotSlider);
+		
+		int startpos = sliderXPos;
+		int endpos = width - 10;
+		int quarterpos = (3 * startpos + endpos) / 4;
+		int halfpos = (startpos + endpos) / 2;
+		int threequarterpos = (startpos + 3 * endpos) / 4;
+		
+		if((startpos - endpos) % 2 != 0) startpos++;
+		if((halfpos - startpos) % 2 != 0) halfpos++;
+		if((endpos - threequarterpos) % 2 != 0) threequarterpos++;
+		
+		if(selectedButton == 2) {
+			GuiSlider slider = new GuiSlider(102, startpos, height - 70, endpos - startpos, 20, "", "x", 0.1, 2, globalSetting.size, true, true, this);
+			buttonList.add(slider);
+			slider.precision = 2;
+			slider.updateSlider();
+			
+			buttonList.add(new GuiCheckBox(109, startpos + 5, height - 25, i18n("savegif"), saveGif));
+		}
 
-		buttonList.add(new GuiButton(104, sliderXPos, height - 60, sliderXSize, 20, globalSetting.lock ? i18n("lockyes") : i18n("lockno")));
+		if(selectedButton != 0) {
+			rotationSlider = new GuiSlider(103, startpos, height - 50, halfpos - startpos, 20, "", " Rotation", 0, 360, globalSetting.rotation, true, true, this);
+			buttonList.add(rotationSlider);
+			rotationSlider.precision = 0;
+			rotationSlider.updateSlider();
+			
+			buttonList.add(new GuiButton(104, halfpos, height - 50, endpos - halfpos, 20, globalSetting.lockRotation ? i18n("lockyes") : i18n("lockno")));
+		}
 		
-		buttonList.add(new GuiButton(105, sliderXPos + sliderXSize, height - 60, sliderXSize / 2, 20, i18n("save")));
-		buttonList.add(new GuiButton(106, sliderXPos + sliderXSize + (sliderXSize / 2), height - 60, sliderXSize / 2, 20, i18n("saveall")));
-		
-		GuiSlider slider = new GuiSlider(102, sliderXPos + sliderXSize, height - 80, sliderXSize, 20, "", "x", 0.1, 2, globalSetting.size, true, true, this);
-		buttonList.add(slider);
-		slider.precision = 2;
-		slider.updateSlider();
-		
-		sizeOutput = new GuiTextField(107, fontRendererObj, sliderXPos + 1, height - 39, sliderXSize - 2, 18);
+		buttonList.add(new GuiButton(105, halfpos, height - 30, threequarterpos - halfpos, 20, i18n("save")));
+		buttonList.add(new GuiButton(106, threequarterpos, height - 30, endpos - threequarterpos, 20, i18n("saveall")));
+
+		sizeOutput = new GuiTextField(107, fontRendererObj, quarterpos + 1, height - 29, halfpos - quarterpos - 2, 18);
 		sizeOutput.setText(String.valueOf(globalSetting.outputSize));
 		sizeOutput.setMaxStringLength(3);
 
 		filter = new GuiTextField(108, fontRendererObj, 11, (int)(this.height * 0.4) - 15, (int)(width * 0.35) - 17, 18);
 		filter.setText(currentFilter);
-		
-		saveDir = new File(mc.mcDataDir, "/RenderTo");
+		filter.setMaxStringLength(128);
 	}
 	
 	private void initDomains() {
@@ -149,14 +174,16 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		drawDefaultBackground();
 		drawRenderBox();
 		
-		drawCenteredString(this.fontRendererObj, i18n("title"), this.width / 2, 15, 16777215);
-		
-		drawString(fontRendererObj, i18n("outputsize"), sliderXPos + sliderXSize + 10, height - 33, 16777215);
-		
+		drawCenteredString(fontRendererObj, i18n("title"), this.width / 2, 15, 16777215);
+
 		itemList.drawScreen(mouseX, mouseY, tickTime);
 		domainList.drawScreen(mouseX, mouseY, tickTime);
-		sizeOutput.drawTextBox();
 		filter.drawTextBox();
+
+		if(selectedButton != 2) {
+			drawString(fontRendererObj, i18n("outputsize"), sliderXPos + 3, height - 23, 16777215);
+			sizeOutput.drawTextBox();
+		}
 		
 		super.drawScreen(mouseX, mouseY, tickTime);
 
@@ -175,7 +202,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		int l = (int)(width * 0.35) + 5;
 		int r = width - 10;
 		int t = 40;
-		int b = height - 90;
+		int b = selectedButton == 2 ? (height - 80) : (height - 60);
 		int cxm2 = l + r;
 		int cym2 = t + b;
 		int w = r - l;
@@ -259,13 +286,14 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 				}
 			}
 			button.enabled = false;
+			initButtonList();
 			selectDomainList(domainListSelection);
 			break;
 		case 104:
-			globalSetting.lock = !globalSetting.lock;
-			button.displayString = globalSetting.lock ? i18n("lockyes") : i18n("lockno");
-			if (globalSetting.lock) {
-				double curValue = rotSlider.getValue();
+			globalSetting.lockRotation = !globalSetting.lockRotation;
+			button.displayString = globalSetting.lockRotation ? i18n("lockyes") : i18n("lockno");
+			if (globalSetting.lockRotation) {
+				double curValue = rotationSlider.getValue();
 				double newValue = 0;
 				int temp = (int) (curValue % 90);
 				if (temp < 45) {
@@ -273,10 +301,10 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 				} else {
 					newValue = curValue + 90 - temp;
 				}
-				newValue = Math.floor(newValue);
-				globalSetting.rotation = (int) newValue;
-				rotSlider.displayString = String.valueOf(newValue) + " Rotation";
-				rotSlider.setValue(newValue);
+				int newValueInt = MathHelper.floor_double(newValue);
+				globalSetting.rotation = newValueInt;
+				rotationSlider.displayString = String.valueOf(newValueInt) + " Rotation";
+				rotationSlider.setValue(newValueInt);
 			}
 			break;
 		case 105:
@@ -284,6 +312,9 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 			break;
 		case 106:
 			saveAll();
+			break;
+		case 109:
+			saveGif = ((GuiCheckBox)button).isChecked();
 			break;
 		case 200:
 			mc.displayGuiScreen(parent);
@@ -771,7 +802,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 			globalSetting.size = MathHelper.floor_double(100 * slider.getValue()) / 100.0;
 			break;
 		case 103:
-			if (globalSetting.lock) {
+			if (globalSetting.lockRotation) {
 				double curValue = MathHelper.floor_double(100 * slider.getValue()) / 100.0;
 				double newValue = 0;
 				int temp = (int) (curValue % 90);

@@ -5,10 +5,10 @@
   "description": "A minecraft mod used to export well-rendered blocks and entities.",
   "version": "${version}",
   "mcversion": "${mcversion}",
-  "url": "",
+  "url": "http://github.com/herbix/renderTo",
   "updateUrl": "",
   "authorList": ["Herbix"],
-  "credits": "Herbix",
+  "credits": "Thanks to all contributors on https://github.com/herbix/renderTo/graphs/contributors",
   "logoFile": "",
   "screenshots": [],
   "dependencies": []
