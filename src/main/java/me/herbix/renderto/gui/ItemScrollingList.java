@@ -1,5 +1,6 @@
 package me.herbix.renderto.gui;
 
+import java.io.IOException;
 import java.util.List;
 
 import net.minecraft.client.gui.Gui;
@@ -7,12 +8,14 @@ import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.WorldRenderer;
 import net.minecraftforge.fml.client.GuiScrollingList;
 
+import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
 public class ItemScrollingList extends GuiScrollingList {
 	
-	public List<?> list;
+	private List<?> list;
 	private RenderToGuiScreen parent;
+	private boolean lastPressed = false;
 
 	public ItemScrollingList(RenderToGuiScreen parent, List<?> model, int width, int height, int top, int bottom, int left) {
 		super(parent.mc, width, height, top, bottom, left, 15);
@@ -52,9 +55,20 @@ public class ItemScrollingList extends GuiScrollingList {
         int scrollBarXStart = this.left + this.listWidth - 6;
         int scrollBarXEnd = scrollBarXStart + 6;
         int boxLeft = this.left;
-        int boxRight = scrollBarXStart - 1;
+        int boxRight = scrollBarXEnd;
 
-		super.drawScreen(mouseX, mouseY, p_22243_3_);
+        if(!lastPressed && Mouse.isButtonDown(0) && (mouseX < boxLeft || mouseX > boxRight)) {
+        	mouseY = top - 1;
+        }
+        super.drawScreen(mouseX, mouseY, p_22243_3_);
+		if(!Mouse.isButtonDown(0) && lastPressed) {
+			try {
+				parent.handleMouseInput();
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+		lastPressed = Mouse.isButtonDown(0);
 		
         this.overlayBackground(0, this.top, 255, 255);
         this.overlayBackground(this.bottom, this.listHeight, 255, 255);

@@ -7,7 +7,7 @@ presenting mod item, block and mobs, just like <a href="http://minecraft.gameped
 Minecraft Wiki</a> does.
 
 <h2>Download & Installation</h2>
-Latest Release: <a href="https://github.com/herbix/renderTo/raw/master/build/libs/RenderTo-0.3.0.jar">RenderTo-0.3.0.jar</a>
+Latest Release: <a href="https://github.com/herbix/renderTo/raw/master/build/libs/RenderTo-0.3.1.jar">RenderTo-0.3.1.jar</a>
 
 RenderTo can be installed in the same way as other mods by putting "RenderTo-x.x.x.jar" into
 "mods" directory.
