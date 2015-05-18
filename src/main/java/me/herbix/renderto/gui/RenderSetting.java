@@ -6,5 +6,6 @@ public class RenderSetting {
 	public double size = 1;
 	public int rotation = 0;
 	public int outputSize = 150;
+	public boolean saveGif = false;
 
 }

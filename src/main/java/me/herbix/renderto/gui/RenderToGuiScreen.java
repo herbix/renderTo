@@ -1,12 +1,10 @@
 package me.herbix.renderto.gui;
 
-import java.awt.Graphics2D;
-import java.awt.Rectangle;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Modifier;
-import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -17,10 +15,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
-import javax.imageio.ImageIO;
-
 import me.herbix.renderto.FakeItem;
 import me.herbix.renderto.RenderToMod;
+import me.herbix.renderto.util.AnimatedGifEncoder;
+import me.herbix.renderto.util.FrameBufferUtils;
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
@@ -34,7 +32,6 @@ import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.client.renderer.texture.TextureMap;
-import net.minecraft.client.renderer.texture.TextureUtil;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.client.resources.model.IBakedModel;
 import net.minecraft.client.shader.Framebuffer;
@@ -55,10 +52,6 @@ import net.minecraftforge.fml.common.ModContainer;
 import net.minecraftforge.fml.common.registry.FMLControlledNamespacedRegistry;
 import net.minecraftforge.fml.common.registry.GameData;
 
-import org.lwjgl.BufferUtils;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL12;
-
 public class RenderToGuiScreen extends GuiScreen implements ISlider {
 	
 	private GuiScreen parent;
@@ -68,6 +61,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 	private GuiButton[] switches = new GuiButton[3];
 	private GuiTextField sizeOutput;
 	private GuiTextField filter;
+	private GuiCheckBox saveGif;
 
 	private List<String> domainListModel = new ArrayList<String>();
 	private List<String> itemListModel = new ArrayList<String>();
@@ -86,8 +80,6 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 	
 	private String currentFilter = "";
 	private String currentFilterPattern = "(.*)";
-
-	private boolean saveGif = false;
 
 	private File saveDir;
 	
@@ -135,8 +127,9 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 			buttonList.add(slider);
 			slider.precision = 2;
 			slider.updateSlider();
-			
-			buttonList.add(new GuiCheckBox(109, startpos + 5, height - 25, i18n("savegif"), saveGif));
+
+			saveGif = new GuiCheckBox(109, startpos + 5, height - 25, i18n("savegif"), globalSetting.saveGif);
+			buttonList.add(saveGif);
 		}
 
 		if(selectedButton != 0) {
@@ -196,6 +189,12 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 				}
 			}
 		}
+
+		if(selectedButton == 2 && mouseX >= saveGif.xPosition &&
+				mouseX <= saveGif.xPosition + saveGif.width &&
+				mouseY >= saveGif.yPosition && mouseY <= saveGif.yPosition + saveGif.height) {
+			drawHoveringText(Arrays.asList(i18n("savegif.warning").split(";")), mouseX, mouseY);
+		}
 	}
 
 	private void drawRenderBox() {
@@ -229,42 +228,50 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 	}
 
 	private void drawBlock(int radius, int left, int top, String selected) {
-		GlStateManager.pushMatrix();
-		GlStateManager.translate(left, top, 50);
-		GlStateManager.scale(radius/16.0, radius/16.0, radius/16.0);
-		GlStateManager.translate(0, 0, -radius/4);
-		RenderHelper.enableGUIStandardItemLighting();
-		GlStateManager.color(1, 1, 1);
-		
+		setupRenderItemGlState(radius, left, top);
 		drawBlockCore(selected);
-		
-		GlStateManager.popMatrix();
-		RenderHelper.disableStandardItemLighting();
+		releaseRenderItemGlState();
 	}
 
 	private void drawEntity(int cxm2, int cym2, String domain, String selected) {
 		Entity entity = cachedEntities.get(domain.equals("minecraft") ? selected : (domain + "." + selected));
 		AxisAlignedBB bb = entity.getEntityBoundingBox();
+		float f = (float)(globalSetting.size * 32);
+		setupRenderEntityGlState(cxm2, cym2, entity, f);
+		drawEntityCore(entity, bb);
+		releaseRenderEntityGlState();
+	}
+
+	private void setupRenderEntityGlState(int cxm2, int cym2, Entity entity, float f) {
 		GlStateManager.pushMatrix();
 		GlStateManager.color(1, 1, 1);
-		float f = (float)(globalSetting.size * 32);
 		GlStateManager.translate(cxm2 / 2, cym2 / 2, 0);
 		GlStateManager.scale(f, f, f);
 		GlStateManager.translate(0, 0, 2.5 * (entity.height / 4 + entity.width / 2 * 0.866));
 		RenderHelper.enableGUIStandardItemLighting();
-		drawEntityCore(entity, bb);
-		RenderHelper.disableStandardItemLighting();
+	}
+
+	private void releaseRenderEntityGlState() {
 		GlStateManager.popMatrix();
+		RenderHelper.disableStandardItemLighting();
 	}
 
 	private void drawItem(int radius, int left, int top, String selected) {
+		setupRenderItemGlState(radius, left, top);
+		drawItemCore(selected);
+		releaseRenderItemGlState();
+	}
+
+	private void setupRenderItemGlState(int radius, int left, int top) {
 		GlStateManager.pushMatrix();
 		GlStateManager.translate(left, top, 50);
-		GlStateManager.scale(radius/16.0, radius/16.0, radius/16.0);
-		GlStateManager.translate(0, 0, -radius/4);
+		GlStateManager.scale(radius / 16.0, radius / 16.0, radius / 16.0);
+		GlStateManager.translate(0, 0, -radius / 4);
 		RenderHelper.enableGUIStandardItemLighting();
 		GlStateManager.color(1, 1, 1);
-		drawItemCore(selected);
+	}
+
+	private void releaseRenderItemGlState() {
 		GlStateManager.popMatrix();
 		RenderHelper.disableStandardItemLighting();
 	}
@@ -314,7 +321,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 			saveAll();
 			break;
 		case 109:
-			saveGif = ((GuiCheckBox)button).isChecked();
+			globalSetting.saveGif = ((GuiCheckBox)button).isChecked();
 			break;
 		case 200:
 			mc.displayGuiScreen(parent);
@@ -366,19 +373,11 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		
 		int r = radius * this.width / mb.framebufferWidth;
 
-		GlStateManager.pushMatrix();
-		GlStateManager.translate(0, 0, 50);
-		GlStateManager.scale(r/16.0, r/16.0, r/16.0);
-		GlStateManager.translate(0, 0, -r/4);
-        RenderHelper.enableGUIStandardItemLighting();
-		GlStateManager.color(1, 1, 1);
-
+		setupRenderItemGlState(r, 0, 0);
 		drawBlockCore(selected);
+		releaseRenderItemGlState();
 		
-		GlStateManager.popMatrix();
-		RenderHelper.disableStandardItemLighting();
-		
-		saveFrameBufferToFile(fb, f, outputSize, outputSize, false);
+		FrameBufferUtils.instance.saveFrameBufferToFile(fb, f, outputSize, outputSize, false);
 		
 		mb.bindFramebuffer(true);
 		fb.deleteFramebuffer();
@@ -440,17 +439,11 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		
 		int r = radius * this.width / mb.framebufferWidth;
 
-		GlStateManager.pushMatrix();
-		GlStateManager.translate(0, 0, 50);
-		GlStateManager.scale(r/16.0, r/16.0, r/16.0);
-		GlStateManager.translate(0, 0, -r/4);
-        RenderHelper.enableGUIStandardItemLighting();
-		GlStateManager.color(1, 1, 1);
+		setupRenderItemGlState(r, 0, 0);
 		drawItemCore(selected);
-		GlStateManager.popMatrix();
-		RenderHelper.disableStandardItemLighting();
-		
-		saveFrameBufferToFile(fb, f, outputSize, outputSize, false);
+		releaseRenderItemGlState();
+
+		FrameBufferUtils.instance.saveFrameBufferToFile(fb, f, outputSize, outputSize, false);
 		
 		mb.bindFramebuffer(true);
 		fb.deleteFramebuffer();
@@ -462,7 +455,8 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 	}
 
 	private void saveEntityPic(String domain, String selected, double size) {
-		File f = new File(saveDir, domain + "/entity/" + size + "x/" + selected.replaceAll("[\\\\\\/\\?\\:\\>\\<\\|\\*\\\"]{1}", "_") + ".png");
+		String fileSuffix = globalSetting.saveGif ? ".gif" : ".png";
+		File f = new File(saveDir, domain + "/entity/" + size + "x/" + selected.replaceAll("[\\\\\\/\\?\\:\\>\\<\\|\\*\\\"]{1}", "_") + fileSuffix);
 		f.getParentFile().mkdirs();
 
 		Entity entity = cachedEntities.get(domain.equals("minecraft") ? selected : (domain + "." + selected));
@@ -476,36 +470,114 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		int result;
 		do {
 			Framebuffer mb = mc.getFramebuffer();
-			int radius = Math.min(mb.framebufferWidth * outy, mb.framebufferHeight * outx);
-			Framebuffer fb = new Framebuffer(mb.framebufferWidth * outx * outy / radius, mb.framebufferHeight * outx * outy / radius, true);
-			fb.framebufferClear();
-			fb.bindFramebuffer(false);
-			
-			int r = radius * this.width / mb.framebufferWidth;
-			
-			AxisAlignedBB bb = entity.getEntityBoundingBox();
-			GlStateManager.pushMatrix();
-			GlStateManager.color(1, 1, 1);
-			float scale = (float)(size * 64) * r / outx / outy;
-			GlStateManager.translate(r / outy / 2, r / outx / 2, 0);
-			GlStateManager.scale(scale, scale, scale);
-			GlStateManager.translate(0, 0, 2.5 * (entity.height / 4 + entity.width / 2 * 0.866));
-			RenderHelper.enableGUIStandardItemLighting();
-			drawEntityCore(entity, bb);
-			RenderHelper.disableStandardItemLighting();
-			GlStateManager.popMatrix();
-			
-			result = saveFrameBufferToFile(fb, f, outx, outy, true);
-			if((result & 1) != 0) {
+			if(globalSetting.saveGif) {
+				result = saveEntityGif(size, f, entity, outx, outy, mb);
+			} else {
+				Framebuffer fb = createAndRenderEntityToFrameBuffer(size, entity, outx, outy, mb);
+				result = FrameBufferUtils.instance.saveFrameBufferToFile(fb, f, outx, outy, true);
+				fb.deleteFramebuffer();
+			}
+
+			if ((result & 1) != 0) {
 				outx *= 2;
 			}
-			if((result & 2) != 0) {
+			if ((result & 2) != 0) {
 				outy *= 2;
 			}
-	
 			mb.bindFramebuffer(true);
-			fb.deleteFramebuffer();
 		} while(result != 0);
+	}
+
+	private int saveEntityGif(double size, File f, Entity entity, int outx, int outy, Framebuffer mb) {
+		int result = 0;
+		int oldRotation = globalSetting.rotation;
+
+		final int count = 360;
+		BufferedImage[] images = new BufferedImage[count];
+		Rectangle[] bounds = new Rectangle[count];
+		int cachedImageSize = 0;
+		boolean cacheImages = true;
+
+		Rectangle allBound = null;
+
+		for(int i=0; i<count; i++) {
+			globalSetting.rotation = 360 * i / count;
+			Framebuffer fb = createAndRenderEntityToFrameBuffer(size, entity, outx, outy, mb);
+			BufferedImage img = FrameBufferUtils.instance.getImageFromFrameBuffer(fb, outx, outy);
+			Rectangle bound = FrameBufferUtils.instance.getImageBound(img);
+			result = FrameBufferUtils.instance.compareImage(img, bound);
+
+			if(result != 0) {
+				return result;
+			}
+			allBound = (allBound == null) ? bound : allBound.union(bound);
+
+			if(cacheImages) {
+				bounds[i] = bound;
+				images[i] = FrameBufferUtils.instance.cutPicture(img, bound);
+				cachedImageSize += 4 * (bound.width * bound.height);
+				if(cachedImageSize > 300 * 1024 * 1024) {
+					cacheImages = false;
+					bounds[i] = null;
+					images[i] = null;
+				}
+			}
+
+			fb.deleteFramebuffer();
+		}
+
+		AnimatedGifEncoder encoder = new AnimatedGifEncoder();
+		encoder.start(f.getAbsolutePath());
+		encoder.setDelay(30);
+		encoder.setRepeat(0);
+
+		BufferedImage bg = new BufferedImage(allBound.width, allBound.height, BufferedImage.TYPE_3BYTE_BGR);
+		Graphics2D g = bg.createGraphics();
+
+		if(cacheImages) {
+			for (int i = 0; i < count; i++) {
+				g.setColor(Color.GREEN);
+				g.fillRect(0, 0, bg.getWidth(), bg.getHeight());
+				g.drawImage(images[i], bounds[i].x - allBound.x, bounds[i].y - allBound.y, null);
+				encoder.setTransparent(Color.green);
+				encoder.addFrame(bg);
+			}
+		} else {
+			for (int i = 0; i < count; i++) {
+				globalSetting.rotation = 360 * i / count;
+				Framebuffer fb = createAndRenderEntityToFrameBuffer(size, entity, outx, outy, mb);
+				BufferedImage img = FrameBufferUtils.instance.getImageFromFrameBuffer(fb, outx, outy);
+				img = FrameBufferUtils.instance.cutPicture(img, allBound);
+				g.setColor(Color.GREEN);
+				g.fillRect(0, 0, bg.getWidth(), bg.getHeight());
+				g.drawImage(img, 0, 0, null);
+				encoder.setTransparent(Color.green);
+				encoder.addFrame(bg);
+				fb.deleteFramebuffer();
+			}
+		}
+
+		g.dispose();
+
+		encoder.finish();
+		globalSetting.rotation = oldRotation;
+		return result;
+	}
+
+	private Framebuffer createAndRenderEntityToFrameBuffer(double size, Entity entity, int outx, int outy, Framebuffer mb) {
+		int radius = Math.min(mb.framebufferWidth * outy, mb.framebufferHeight * outx);
+		Framebuffer fb = new Framebuffer(mb.framebufferWidth * outx * outy / radius, mb.framebufferHeight * outx * outy / radius, true);
+		fb.framebufferClear();
+		fb.bindFramebuffer(false);
+
+		int r = radius * this.width / mb.framebufferWidth;
+		float scale = (float)(size * 64) * r / outx / outy;
+		AxisAlignedBB bb = entity.getEntityBoundingBox();
+
+		setupRenderEntityGlState(r / outy, r / outx, entity, scale);
+		drawEntityCore(entity, bb);
+		releaseRenderEntityGlState();
+		return fb;
 	}
 
 	private void drawEntityCore(Entity entity, AxisAlignedBB bb) {
@@ -516,105 +588,6 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 			GlStateManager.translate(0, (bb.minY - bb.maxY) / 2, 0);
 			((Render)mc.getRenderManager().entityRenderMap.get(entity.getClass())).doRender(entity, 0, 0, 0, 0, 0);
 		}
-	}
-
-	private IntBuffer pixelBuffer;
-	private int[] pixelValues;
-	
-	private BufferedImage cutPicture(BufferedImage image, Rectangle bound) {
-		BufferedImage image2 = new BufferedImage(bound.width, bound.height, BufferedImage.TYPE_4BYTE_ABGR);
-		Graphics2D g = image2.createGraphics();
-		g.drawImage(image, -bound.x, -bound.y, null);
-		g.dispose();
-		return image2;
-	}
-	
-	private int compareImage(BufferedImage image, Rectangle bound) {
-		int r = 0;
-		if(bound.x == 0 || bound.x + bound.width == image.getWidth()) {
-			r |= 1;
-		}
-		if(bound.y == 0 || bound.y + bound.height == image.getHeight()) {
-			r |= 2;
-		}
-		return r;
-	}
-
-	private Rectangle getImageBound(BufferedImage image) {
-		int h = image.getHeight();
-		int w = image.getWidth();
-		if(pixelValues.length < h * w) {
-			pixelValues = new int[h * w];
-		}
-		
-		image.getRGB(0, 0, w, h, pixelValues, 0, w);
-
-		int t, l, b, r;
-		o:for(t=0; t<h; t++) {
-			for(int i=0; i<w; i++) {
-				if((pixelValues[t*w+i] & 0xFF000000) != 0) {
-					break o;
-				}
-			}
-		}
-		o:for(b=h; b>0; b--) {
-			for(int i=0; i<w; i++) {
-				if((pixelValues[(b-1)*w+i] & 0xFF000000) != 0) {
-					break o;
-				}
-			}
-		}
-		o:for(l=0; l<w; l++) {
-			for(int i=0; i<h; i++) {
-				if((pixelValues[i*w+l] & 0xFF000000) != 0) {
-					break o;
-				}
-			}
-		}
-		o:for(r=w; r>0; r--) {
-			for(int i=0; i<h; i++) {
-				if((pixelValues[i*w+(r-1)] & 0xFF000000) != 0) {
-					break o;
-				}
-			}
-		}
-		
-		return new Rectangle(l, t, r-l, b-t);
-	}
-
-	private int saveFrameBufferToFile(Framebuffer buffer, File f, int width, int height, boolean cut) {
-		try {
-			int k = buffer.framebufferTextureWidth * buffer.framebufferTextureHeight;
-			if (pixelBuffer == null || pixelBuffer.capacity() < k) {
-				pixelBuffer = BufferUtils.createIntBuffer(k);
-				pixelValues = new int[k];
-			}
-            GL11.glPixelStorei(GL11.GL_PACK_ALIGNMENT, 1);
-            GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 1);
-            pixelBuffer.clear();
-            GlStateManager.bindTexture(buffer.framebufferTexture);
-            GL11.glGetTexImage(GL11.GL_TEXTURE_2D, 0, GL12.GL_BGRA, GL12.GL_UNSIGNED_INT_8_8_8_8_REV, pixelBuffer);
-            pixelBuffer.get(pixelValues);
-            TextureUtil.processPixelValues(pixelValues, buffer.framebufferTextureWidth, buffer.framebufferTextureHeight);
-			BufferedImage bufferedimage = new BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR);
-			int l = buffer.framebufferTextureHeight - buffer.framebufferHeight;
-			bufferedimage.setRGB(0, 0, width, height, pixelValues, l*buffer.framebufferTextureWidth, buffer.framebufferTextureWidth);
-			if(cut) {
-				Rectangle bound = getImageBound(bufferedimage);
-				int compareResult = compareImage(bufferedimage, bound);
-				if(compareResult == 0) {
-					bufferedimage = cutPicture(bufferedimage, bound);
-				} else {
-					return compareResult;
-				}
-			}
-			ImageIO.write(bufferedimage, "png", f);
-		} catch(Exception e) {
-			RenderToMod.logger.error("Cannot save framebuffer to file " + f);
-			RenderToMod.logger.error(e + ": " + e.getMessage());
-			RenderToMod.logger.error(Arrays.toString(e.getStackTrace()));
-		}
-		return 0;
 	}
 
 	public void listSelect(ItemScrollingList list, int index) {
