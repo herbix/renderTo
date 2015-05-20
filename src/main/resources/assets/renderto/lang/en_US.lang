@@ -16,4 +16,6 @@ gui.renderto.outputsize=Image Size:
 gui.renderto.lockyes=Lock To 90 (Yes)
 gui.renderto.lockno=Lock To 90 (No)
 gui.renderto.savegif=Save To GIF
-gui.renderto.savegif.warning=§cWarning:;Rendering to gif maybe very slow. Minecraft;cannot respond to any request during while;rendering.
+gui.renderto.savegif.warning=§cWarning:;Rendering to gif maybe very slow. Minecraft;cannot respond to any request while;rendering.
+gui.renderto.rotation.prefix=
+gui.renderto.rotation.suffix= Rotation

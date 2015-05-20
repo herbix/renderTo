@@ -1,6 +1,8 @@
 package me.herbix.renderto.gui;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -51,6 +53,8 @@ import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.ModContainer;
 import net.minecraftforge.fml.common.registry.FMLControlledNamespacedRegistry;
 import net.minecraftforge.fml.common.registry.GameData;
+
+import com.google.common.collect.ImmutableSet;
 
 public class RenderToGuiScreen extends GuiScreen implements ISlider {
 	
@@ -133,7 +137,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		}
 
 		if(selectedButton != 0) {
-			rotationSlider = new GuiSlider(103, startpos, height - 50, halfpos - startpos, 20, "", " Rotation", 0, 360, globalSetting.rotation, true, true, this);
+			rotationSlider = new GuiSlider(103, startpos, height - 50, halfpos - startpos, 20, i18n("rotation.prefix"), i18n("rotation.suffix"), 0, 360, globalSetting.rotation, true, true, this);
 			buttonList.add(rotationSlider);
 			rotationSlider.precision = 0;
 			rotationSlider.updateSlider();
@@ -156,7 +160,11 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 	private void initDomains() {
 		domainListModel.add("minecraft");
 		List<ModContainer> ml = Loader.instance().getModList();
+		ImmutableSet<String> excludeMods = ImmutableSet.of("mcp", "Forge", "FML");
 		for(ModContainer m : ml) {
+			if(excludeMods.contains(m.getModId())) {
+				continue;
+			}
 			domainListModel.add(m.getModId());
 		}
 		selectDomainList(domainListSelection);

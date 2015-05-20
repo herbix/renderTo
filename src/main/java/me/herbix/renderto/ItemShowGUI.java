@@ -28,9 +28,9 @@ public class ItemShowGUI extends Item {
 		super.addInformation(stack, playerIn, tooltip, advanced);
 		int use = Minecraft.getMinecraft().gameSettings.keyBindUseItem.getKeyCode();
 		if(use == -100) {
-			tooltip.add(I18n.format("item.renderTo.toolTip.1.mouse", I18n.format("item.renderto.toolTip.1.mouse.left")));
+			tooltip.add(I18n.format("item.renderTo.toolTip.1.mouse", I18n.format("item.renderTo.toolTip.1.mouse.left")));
 		} else if(use == -99) {
-			tooltip.add(I18n.format("item.renderTo.toolTip.1.mouse", I18n.format("item.renderto.toolTip.1.mouse.right")));
+			tooltip.add(I18n.format("item.renderTo.toolTip.1.mouse", I18n.format("item.renderTo.toolTip.1.mouse.right")));
 		} else {
 			tooltip.add(I18n.format("item.renderTo.toolTip.1", GameSettings.getKeyDisplayString(use)));
 		}

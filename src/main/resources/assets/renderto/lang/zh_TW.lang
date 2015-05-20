@@ -1,0 +1,21 @@
+itemGroup.renderto=我要渲染！
+
+item.renderTo.name=我要渲染！
+item.renderTo.toolTip.1=按%s可以打開渲染介面
+item.renderTo.toolTip.1.mouse=按%s可以打開渲染介面
+item.renderTo.toolTip.1.mouse.left=滑鼠左鍵
+item.renderTo.toolTip.1.mouse.right=滑鼠右鍵
+
+gui.renderto.title=我要渲染
+gui.renderto.item=物品
+gui.renderto.block=方塊
+gui.renderto.entity=實體
+gui.renderto.save=保存
+gui.renderto.saveall=全部保存
+gui.renderto.outputsize=圖像大小：
+gui.renderto.lockyes=鎖定到90度 (是)
+gui.renderto.lockno=鎖定到90度 (否)
+gui.renderto.savegif=保存為GIF
+gui.renderto.savegif.warning=§c警告:;保存為gif需要較多時間，此時Minecraft無法;回應任何輸入。
+gui.renderto.rotation.prefix=旋轉角度 
+gui.renderto.rotation.suffix=

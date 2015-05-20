@@ -7,7 +7,7 @@ presenting mod item, block and mobs, just like [Official Minecraft Wiki]
 (http://minecraft.gamepedia.com/) does.
 
 ## Download & Installation
-Latest Release: [RenderTo-0.4.0.jar](https://github.com/herbix/renderTo/raw/master/build/libs/RenderTo-0.4.0.jar)
+Latest Release: [RenderTo-0.4.1.jar](https://github.com/herbix/renderTo/raw/master/build/libs/RenderTo-0.4.1.jar)
 
 RenderTo can be installed in the same way as other mods by putting "RenderTo-x.x.x.jar" into
 "mods" directory.
