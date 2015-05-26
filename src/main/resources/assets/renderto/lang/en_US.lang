@@ -19,3 +19,4 @@ gui.renderto.savegif=Save To GIF
 gui.renderto.savegif.warning=§cWarning:;Rendering to gif maybe very slow. Minecraft;cannot respond to any request while;rendering.
 gui.renderto.rotation.prefix=
 gui.renderto.rotation.suffix= Rotation
+gui.renderto.tickExisted=Tick Existed: 

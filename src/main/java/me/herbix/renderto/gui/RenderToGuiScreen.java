@@ -32,6 +32,7 @@ import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.Render;
+import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.client.resources.I18n;
@@ -127,9 +128,14 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		if((endpos - threequarterpos) % 2 != 0) threequarterpos++;
 		
 		if(selectedButton == 2) {
-			GuiSlider slider = new GuiSlider(102, startpos, height - 70, endpos - startpos, 20, "", "x", 0.1, 2, globalSetting.size, true, true, this);
+			GuiSlider slider = new GuiSlider(102, startpos, height - 70, halfpos - startpos, 20, "", "x", 0.1, 2, globalSetting.size, true, true, this);
 			buttonList.add(slider);
 			slider.precision = 2;
+			slider.updateSlider();
+			
+			slider = new GuiSlider(110, halfpos, height - 70, endpos - halfpos, 20, i18n("tickExisted"), "", 0, 200, globalSetting.tickExisted, true, true, this);
+			buttonList.add(slider);
+			slider.precision = 0;
 			slider.updateSlider();
 
 			saveGif = new GuiCheckBox(109, startpos + 5, height - 25, i18n("savegif"), globalSetting.saveGif);
@@ -318,8 +324,8 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 				}
 				int newValueInt = MathHelper.floor_double(newValue);
 				globalSetting.rotation = newValueInt;
-				rotationSlider.displayString = String.valueOf(newValueInt) + " Rotation";
 				rotationSlider.setValue(newValueInt);
+				rotationSlider.updateSlider();
 			}
 			break;
 		case 105:
@@ -411,14 +417,14 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		GlStateManager.scale(0.5F, 0.5F, 0.5F);
 		
 		if (ibakedmodel.isGui3d()) {
-		    GlStateManager.scale(40.0F, 40.0F, 40.0F);
-		    GlStateManager.rotate(210.0F, 1.0F, 0.0F, 0.0F);
-		    GlStateManager.rotate(-135.0F, 0.0F, 1.0F, 0.0F);
-		    GlStateManager.enableLighting();
+			GlStateManager.scale(40.0F, 40.0F, 40.0F);
+			GlStateManager.rotate(210.0F, 1.0F, 0.0F, 0.0F);
+			GlStateManager.rotate(-135.0F, 0.0F, 1.0F, 0.0F);
+			GlStateManager.enableLighting();
 		} else {
-		    GlStateManager.scale(64.0F, 64.0F, 64.0F);
-		    GlStateManager.rotate(180.0F, 1.0F, 0.0F, 0.0F);
-		    GlStateManager.disableLighting();
+			GlStateManager.scale(64.0F, 64.0F, 64.0F);
+			GlStateManager.rotate(180.0F, 1.0F, 0.0F, 0.0F);
+			GlStateManager.disableLighting();
 		}
 		
 		GlStateManager.rotate(globalSetting.rotation, 0, 1, 0);
@@ -594,7 +600,15 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		GlStateManager.scale(-1, 1, 1);
 		if(entity != null) {
 			GlStateManager.translate(0, (bb.minY - bb.maxY) / 2, 0);
-			((Render)mc.getRenderManager().entityRenderMap.get(entity.getClass())).doRender(entity, 0, 0, 0, 0, 0);
+			RenderManager renderManager = mc.getRenderManager();
+			float oldViewX = renderManager.playerViewX;
+			float oldViewY = renderManager.playerViewY;
+			renderManager.playerViewX = 30;
+			renderManager.playerViewY = -225 - globalSetting.rotation;
+			entity.ticksExisted = globalSetting.tickExisted;
+			((Render)renderManager.entityRenderMap.get(entity.getClass())).doRender(entity, 0, 0, 0, 0, 0);
+			renderManager.playerViewX = oldViewX;
+			renderManager.playerViewY = oldViewY;
 		}
 	}
 
@@ -794,11 +808,16 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 				}
 				newValue = Math.floor(newValue);
 				globalSetting.rotation = (int) newValue;
-				slider.displayString = String.valueOf(newValue) + " Rotation";
 				slider.setValue(newValue);
+				slider.parent = null;
+				slider.updateSlider();
+				slider.parent = this;
 			} else {
 				globalSetting.rotation = (int) (MathHelper.floor_double(100 * slider.getValue()) / 100.0);
 			}
+			break;
+		case 110:
+			globalSetting.tickExisted = MathHelper.floor_double(slider.getValue() + 0.5);
 			break;
 		}
 	}

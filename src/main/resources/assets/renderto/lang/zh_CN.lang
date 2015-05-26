@@ -19,3 +19,4 @@ gui.renderto.savegif=保存为GIF
 gui.renderto.savegif.warning=§c警告:;保存为gif需要较多时间，此时Minecraft无法;响应任何输入。
 gui.renderto.rotation.prefix=旋转角度 
 gui.renderto.rotation.suffix=
+gui.renderto.tickExisted=生存时间(刻): 
