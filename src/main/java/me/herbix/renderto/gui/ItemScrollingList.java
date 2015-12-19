@@ -6,6 +6,7 @@ import java.util.List;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.WorldRenderer;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraftforge.fml.client.GuiScrollingList;
 
 import org.lwjgl.input.Mouse;
@@ -81,13 +82,13 @@ public class ItemScrollingList extends GuiScrollingList {
         parent.mc.renderEngine.bindTexture(Gui.optionsBackground);
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         float var6 = 32.0F;
-        worldr.startDrawingQuads();
-        worldr.setColorRGBA_I(4210752, p_22239_4_);
-        worldr.addVertexWithUV(0.0D, p_22239_2_, 0.0D, 0.0D, p_22239_2_ / var6);
-        worldr.addVertexWithUV((double)this.listWidth + 30, p_22239_2_, 0.0D, (this.listWidth + 30) / var6, p_22239_2_ / var6);
-        worldr.setColorRGBA_I(4210752, p_22239_3_);
-        worldr.addVertexWithUV((double)this.listWidth + 30, p_22239_1_, 0.0D, (this.listWidth + 30) / var6, p_22239_1_ / var6);
-        worldr.addVertexWithUV(0.0D, p_22239_1_, 0.0D, 0.0D, p_22239_1_ / var6);
+        worldr.begin(7, DefaultVertexFormats.POSITION_TEX_NORMAL);
+        worldr.color(64, 64, 64, p_22239_4_);
+        worldr.pos(0.0D, p_22239_2_, 0.0D).tex(0.0D, p_22239_2_ / var6);
+        worldr.pos((double)this.listWidth + 30, p_22239_2_, 0.0D).tex((this.listWidth + 30) / var6, p_22239_2_ / var6);
+        worldr.color(64, 64, 64, p_22239_3_);
+        worldr.pos((double)this.listWidth + 30, p_22239_1_, 0.0D).tex((this.listWidth + 30) / var6, p_22239_1_ / var6);
+        worldr.pos(0.0D, p_22239_1_, 0.0D).tex(0.0D, p_22239_1_ / var6);
         var5.draw();
     }
 
