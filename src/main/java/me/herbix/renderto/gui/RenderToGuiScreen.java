@@ -46,6 +46,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.MathHelper;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.client.config.GuiCheckBox;
 import net.minecraftforge.fml.client.config.GuiSlider;
@@ -696,12 +697,12 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		FMLControlledNamespacedRegistry<Block> r1 = GameData.getBlockRegistry();
 		
 		cachedBlocks.clear();
-		for(Object keyobj : r1.getKeys()) {
+		for(ResourceLocation keyobj : r1.getKeys()) {
 			String name = keyobj.toString();
 			int index = name.indexOf(':');
 			if((index < 0 && domain.equals("minecraft:")) || name.startsWith(domain)) {
 				String blockName = index < 0 ? name : name.substring(index + 1);
-				Block block = r1.getObject(name);
+				Block block = r1.getObject(keyobj);
 				List<IBlockState> states = block.getBlockState().getValidStates();
 				if(states.size() == 1) {
 					if(checkMatches(blockName, currentFilterPattern)) {
@@ -731,12 +732,12 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 		String domain = domainListModel.get(domainListSelection) + ":";
 		FMLControlledNamespacedRegistry<Item> r1 = GameData.getItemRegistry();
 		cachedItems.clear();
-		for(Object keyobj : r1.getKeys()) {
+		for(ResourceLocation keyobj : r1.getKeys()) {
 			String name = keyobj.toString();
 			int index = name.indexOf(':');
 			if((index < 0 && domain.equals("minecraft:")) || name.startsWith(domain)) {
 				String fillName = index < 0 ? name : name.substring(index + 1);
-				Item item = r1.getObject(name);
+				Item item = r1.getObject(keyobj);
 				if(item.getHasSubtypes()) {
 					List<ItemStack> itemStacks = new ArrayList<ItemStack>();
 					item.getSubItems(item, item.getCreativeTab(), itemStacks);
@@ -751,7 +752,7 @@ public class RenderToGuiScreen extends GuiScreen implements ISlider {
 				} else {
 					if(checkMatches(fillName, currentFilterPattern)) {
 						itemListModel.add(fillName);
-						cachedItems.put(fillName, new ItemStack(r1.getObject(name)));
+						cachedItems.put(fillName, new ItemStack(r1.getObject(keyobj)));
 					}
 				}
 			}

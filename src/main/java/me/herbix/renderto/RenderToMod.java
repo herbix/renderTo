@@ -76,7 +76,7 @@ public class RenderToMod implements IRenderToApiEntry {
 		DifficultyInstance difficulty = world.getDifficultyForLocation(new BlockPos(0, 0, 0));
 		
 		EntityPigZombie entityPigMan = new EntityPigZombie(world);
-		entityPigMan.func_180482_a(difficulty, null);
+		entityPigMan.onInitialSpawn(difficulty, null);
 		entityPigMan.setChild(false);
 		result.put("PigZombie", entityPigMan);
 		
@@ -133,11 +133,11 @@ public class RenderToMod implements IRenderToApiEntry {
 		result.put("Slime:Small", entitySlime);
 		
 		EntityGhast entityGhast = new EntityGhast(world);
-		entityGhast.func_175454_a(false);
+		entityGhast.setAttacking(false);
 		result.put("Ghast:Normal", entityGhast);
 
 		entityGhast = new EntityGhast(world);
-		entityGhast.func_175454_a(true);
+		entityGhast.setAttacking(true);
 		result.put("Ghast:Shooting", entityGhast);
 		
 		EntityVillager entityVillager = new EntityVillager(world);
